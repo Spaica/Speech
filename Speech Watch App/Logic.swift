@@ -11,6 +11,7 @@ import WatchKit
 import AVFoundation
 import Observation
 
+// MARK: CLASS SPEAKINGRATEMONITOR
 @Observable
 class SpeakingRateMonitor {
     
@@ -37,16 +38,19 @@ class SpeakingRateMonitor {
     private var calculationTimer: Timer?
     
     
-    
+    // MARK: Start monitoring
     func startMonitoring() {
-        guard !isMonitoring else { return }
+        //check
+        guard !isMonitoring else {
+            return
+        }
         
-        //Microphone authorization
-        Task {
-            let authorized = await requestMicrophonePermission()
+        //microphone authorization
+        Task { //not blocking, separate thread
+            let authorized = await requestMicrophonePermission() //bool: is the permission given?
             
             if authorized {
-                // 2. Esegui il setup e l'avvio sull'attore principale per gli aggiornamenti UI
+                //setup on the main actor for ui updates: the main actor makes sure that the code is executed on the main thread (all the ui updates have to be executed on the main thread)
                 await MainActor.run {
                     self.statusMessage = "Starting..."
                     self.isMonitoring = true
@@ -56,134 +60,124 @@ class SpeakingRateMonitor {
                 }
             } else {
                 await MainActor.run {
-                    self.statusMessage = "Permesso Microfono Negato. Controlla Impostazioni."
+                    self.statusMessage = "Microphone access denied. Check the settings."
                     self.isMonitoring = false
                 }
             }
         }
     }
     
-    // -----------------------------------------------------
-    // 2. Funzione Principale di Arresto
-    // -----------------------------------------------------
-    
+    // MARK: End monitoring
     func stopMonitoring() {
-        guard isMonitoring else { return }
+        //check
+        guard isMonitoring else {
+            return
+        }
         
         isMonitoring = false
-        statusMessage = "Pronto"
-        
-        // Invalida e rimuovi il timer di calcolo
+        statusMessage = "Ready"
         calculationTimer?.invalidate()
         calculationTimer = nil
         
-        // Arresta e disconnetti l'audio engine
         if let engine = audioEngine {
             engine.stop()
             engine.inputNode.removeTap(onBus: 0)
             audioEngine = nil
-            print("Monitoraggio e Audio Engine arrestati.")
+            print("Monitoring and Audio Engine arrested.")
         }
-        
         resetMetrics()
     }
     
-    // -----------------------------------------------------
-    // 3. Logica di Setup e Gestione Permessi
-    // -----------------------------------------------------
-    
+    // MARK: Permissions request
     private func requestMicrophonePermission() async -> Bool {
-        let status = await AVAudioApplication.requestRecordPermission()
+        let status = await AVAudioApplication.requestRecordPermission() //system call
         return status
     }
     
+    // MARK: Set up Audio Engine
     private func setupAudioEngine() {
-        let engine = AVAudioEngine()
-        self.audioEngine = engine
+        let engine = AVAudioEngine() //handles the sound elaboration
+        self.audioEngine = engine //set the object engine in my speakingratemonitor engine
         
-        let inputNode = engine.inputNode
-        let format = inputNode.outputFormat(forBus: 0)
+        let inputNode = engine.inputNode //take the input node
+        let format = inputNode.outputFormat(forBus: 0) //output format on the standard bus
         
         // Installiamo il "tap" per l'analisi del segnale
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] (buffer, time) in
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) {
+            [weak self] (buffer, time) in //weak self is for problems of deallocation with objects with multiple references
             // Processiamo il buffer nel thread ad alta priorità in cui viene chiamato il tap
             self?.processAudioBuffer(buffer: buffer)
         }
         
         do {
             try engine.start()
-            print("AVAudioEngine avviato.")
-            statusMessage = "In Monitoraggio..."
+            print("Starting AVAudioEngine...")
+            statusMessage = "Monitoring..."
         } catch {
-            print("Errore nell'avvio di AVAudioEngine: \(error.localizedDescription)")
+            print("Error in starting AVAudioEngine: \(error.localizedDescription)")
             stopMonitoring()
-            statusMessage = "Errore Audio"
+            statusMessage = "Audio error"
         }
     }
     
-    // -----------------------------------------------------
-    // 4. Voice Activity Detection (VAD) - Analisi del Segnale
-    // -----------------------------------------------------
-    
-    private func processAudioBuffer(buffer: AVAudioPCMBuffer) {
-        guard let data = buffer.floatChannelData else { return }
-        let frameLength = buffer.frameLength
-        let sampleRate = buffer.format.sampleRate
+    // MARK: Voice Activity Detection
+    private func processAudioBuffer(buffer: AVAudioPCMBuffer) { //buffer for not compressed audio data
+        //check
+        guard let data = buffer.floatChannelData else {
+            return
+        }
+        let frameLength = buffer.frameLength //1 frame = 1 sample because we are using only one channel, quindi 1024 frame totali
+        let sampleRate = buffer.format.sampleRate //framelenght/time range, how many frames in a time range
         
-        // Calcolo dell'RMS (Root Mean Square) per misurare l'energia del suono
+        //RMS to measure the energy of the signal
         var sumOfSquares: Float = 0.0
-        for i in 0..<Int(frameLength) {
-            let sample = data.pointee[i]
+        for i in 0..<Int(frameLength) { //from 0 to frames in a time range
+            let sample = data.pointee[i] //collect all the frames in an array, .pointee is for accessing to the real pointer value and not just the pointer
             sumOfSquares += sample * sample
         }
-        
         let rms = sqrt(sumOfSquares / Float(frameLength))
         let bufferDuration = Double(frameLength) / sampleRate
         
-        // Se l'RMS supera la soglia, registriamo che c'è attività vocale
+        //if the rms is above the minimum threshold of the noise, we register vocal activity
         if rms > rmsThreshold {
-            // Aggiungiamo la durata del buffer al tempo totale di parlato
             totalSpeakingTime += bufferDuration
         }
-        
-        // Aggiorna il tempo totale di monitoraggio
         totalMonitoringTime += bufferDuration
     }
     
-    // -----------------------------------------------------
-    // 5. Logica di Calcolo WPM e Timer
-    // -----------------------------------------------------
-    
+    // MARK: Timer
     private func startCalculationTimer() {
-        // Il timer si assicura che il calcolo WPM e l'aggiornamento UI avvengano a intervalli regolari
-        calculationTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-            self?.calculateAndCheckRate()
+        //timer is for making sure that the WPN calculation and the UI updates happen at regular intervals
+        calculationTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { //time interval of 1.00, in infinite loop
+            [weak self] _ in
+            self?.calculateAndCheckRate() //executed every time interval
         }
     }
     
+    // MARK: WPN calculation
     private func calculateAndCheckRate() {
+        //check
         guard totalMonitoringTime > 0 else {
-            statusMessage = "In Monitoraggio: \(Int(totalMonitoringTime))s"
+            statusMessage = "Monitoring: \(Int(totalMonitoringTime))s"
             return
         }
         
-        // 1. Calcola la Densità di Parlato (Speech Density: quanto tempo hai parlato rispetto al tempo totale)
+        //How much you spoke related to the total time ( :c probably won't work )
         let speechDensity = totalSpeakingTime / totalMonitoringTime
         
-        // 2. Mappa la densità WPM (Stima)
-        // La mappatura è un'euristica: più alta è la densità, più veloce stai parlando.
         let minWPM: Int = 60
         let maxWPM: Int = 300
         
         let calculatedRate = Int(Float(minWPM) + (Float(maxWPM - minWPM) * Float(speechDensity)))
         
-        // 3. Aggiorna lo stato su MainActor
+        //Updates the UI
         DispatchQueue.main.async {
             self.currentWPM = calculatedRate
             self.checkThreshold()
         }
     }
     
+    // MARK: Reset metrics
     private func resetMetrics() {
         totalSpeakingTime = 0.0
         totalMonitoringTime = 0.0
@@ -191,29 +185,27 @@ class SpeakingRateMonitor {
         lastHapticTime = nil
     }
     
-    // -----------------------------------------------------
-    // 6. Logica di Soglia e Haptic Feedback
-    // -----------------------------------------------------
-    
+    // MARK: Check thresholds
     private func checkThreshold() {
         if currentWPM > wpmThreshold {
             triggerHapticFeedback()
-            statusMessage = "🚨 VELOCITÀ ECCESSIVA! Rallenta."
+            statusMessage = "Slow down!"
         } else if isMonitoring {
-            statusMessage = "In Monitoraggio: Tutto OK"
+            statusMessage = "OK"
         }
     }
     
+    // MARK: Haptics
     private func triggerHapticFeedback() {
         let now = Date()
-        // Controllo di Cooldown
+        //cooldown
         if let lastTime = lastHapticTime, now.timeIntervalSince(lastTime) < hapticCooldown {
             return
         }
         
-        // Esegue la vibrazione
+        //vibration
         WKInterfaceDevice.current().play(.notification)
-        print("VIBRAZIONE: Soglia \(wpmThreshold) WPM superata (\(currentWPM) WPM).")
+        print("VIBRAZION: Threshold \(wpmThreshold) WPM exceeded (\(currentWPM) WPM).")
         lastHapticTime = now
     }
 }
