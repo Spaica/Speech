@@ -25,7 +25,7 @@ class SpeakingRateMonitor {
     let wpmThresholdMin: Int = 100
     
     //RMS: minimum amplitude of noise to be considered words and not external noise
-    private var rmsThreshold: Float = 0.005 //REMEMBER TO INCREASE THIS NUMBER IF IT DETECTS TO MUCH NOISE
+    private var rmsThreshold: Float = 0.01 //REMEMBER TO INCREASE THIS NUMBER IF IT DETECTS TO MUCH NOISE
     
 
     private var audioEngine: AVAudioEngine?
@@ -36,6 +36,10 @@ class SpeakingRateMonitor {
     private var totalMonitoringTime: TimeInterval = 0.0
     private let updateInterval: TimeInterval = 1.0
     private var calculationTimer: Timer?
+    
+    //Damping factor for the sliding average
+    //0.2: 20% is from new data, 80% from the old average.
+    private let smoothingFactor: Double = 0.6 //the closer the value to 1, the faster the update
     
     
     // MARK: Start monitoring
@@ -102,10 +106,8 @@ class SpeakingRateMonitor {
         let inputNode = engine.inputNode //take the input node
         let format = inputNode.outputFormat(forBus: 0) //output format on the standard bus
         
-        // Installiamo il "tap" per l'analisi del segnale
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) {
             [weak self] (buffer, time) in //weak self is for problems of deallocation with objects with multiple references
-            // Processiamo il buffer nel thread ad alta priorità in cui viene chiamato il tap
             self?.processAudioBuffer(buffer: buffer)
         }
         
@@ -156,23 +158,33 @@ class SpeakingRateMonitor {
     
     // MARK: WPN calculation
     private func calculateAndCheckRate() {
-        //check
-        guard totalMonitoringTime > 0 else {
-            statusMessage = "Monitoring: \(Int(totalMonitoringTime))s"
-            return
-        }
+            //check for a complete observing interval
+            guard totalMonitoringTime >= updateInterval else {
+                //updates UI without calculating WPN
+                DispatchQueue.main.async {
+                    self.statusMessage = "Monitoring: \(Int(self.totalMonitoringTime))s"
+                }
+                return
+            }
+
+            let instantaneousDensity = totalSpeakingTime / totalMonitoringTime
+            
+            //WPN only for this interval
+            let minWPM: Int = 60
+            let maxWPM: Int = 300
+            
+            let instantaneousRate = Int(Float(minWPM) + (Float(maxWPM - minWPM) * Float(instantaneousDensity)))
         
-        //How much you spoke related to the total time ( :c probably won't work )
-        let speechDensity = totalSpeakingTime / totalMonitoringTime
-        
-        let minWPM: Int = 60
-        let maxWPM: Int = 300
-        
-        let calculatedRate = Int(Float(minWPM) + (Float(maxWPM - minWPM) * Float(speechDensity)))
+            let newWPM = Double(currentWPM) * (1.0 - smoothingFactor) + Double(instantaneousRate) * smoothingFactor
+            
+            //reset only for that window
+            totalSpeakingTime = 0.0
+            totalMonitoringTime = 0.0
+            
         
         //Updates the UI
         DispatchQueue.main.async {
-            self.currentWPM = calculatedRate
+            self.currentWPM = Int(round(newWPM))
             self.checkThreshold()
         }
     }
