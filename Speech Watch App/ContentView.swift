@@ -27,7 +27,7 @@ struct ContentView: View {
                     // Colore del testo in base alla soglia
                     .foregroundColor(monitor.currentWPM > monitor.wpmThreshold && monitor.isMonitoring ? .red : .green)
                 
-                Text("WPM (stimato)")
+                Text("WPM (esteemed)")
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundColor(.white.opacity(0.8))
@@ -44,7 +44,7 @@ struct ContentView: View {
                     monitor.startMonitoring()
                 }
             }) {
-                Text(monitor.isMonitoring ? "STOP" : "INIZIA")
+                Text(monitor.isMonitoring ? "STOP" : "START")
                     .bold()
             }
             .padding()
