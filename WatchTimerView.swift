@@ -37,18 +37,11 @@ struct WatchTimerView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
             }
-            .buttonStyle(CapsuleFillStyle(fill: Color(.gray)))
-
-            Button(role: .destructive) {
-                vm.stop()
-                dismiss()  // pop back to setup
-            } label: {
-                Text("Stop")
-                    .font(.system(.headline, design: .rounded))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-            }
+            .buttonStyle(CapsuleFillStyle(fill: Color(.red)))
             .buttonStyle(CapsuleFillStyle(fill: Color.red.opacity(0.85)))
+            
+            .padding(.top, 30)
+
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -64,14 +57,17 @@ struct WatchTimerView: View {
 
     private var waveformBadge: some View {
         ZStack {
-
-            Text("\(monitor.currentWPM)")
-                .font(.system(size: 48, weight: .bold, design: .rounded))
+            HStack{
+                
+                Text("\(monitor.currentWPM)")
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
                 // Colore del testo in base alla soglia
-                .foregroundColor(
-                    monitor.currentWPM > monitor.wpmThreshold
+                    .foregroundColor(
+                        monitor.currentWPM > monitor.wpmThreshold
                         && monitor.isMonitoring ? .red : .green
-                )
+                    )
+                Text("WPM")
+                .font(.system(size: 12, weight: .light, design: .rounded))            }
         }
 
     }

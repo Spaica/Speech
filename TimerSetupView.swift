@@ -5,7 +5,7 @@ struct TimerSetupView: View {
     @State private var seconds = 1
     @State private var navigateToRecording = false
     @State private var selectedDuration = 0
-
+    @State var monitor = SpeakingRateMonitor()
     var body: some View {
         VStack(spacing: -5) {
             // Time pickers
@@ -36,6 +36,11 @@ struct TimerSetupView: View {
             Spacer()
 
             Button {
+                if monitor.isMonitoring {
+                    monitor.stopMonitoring()
+                } else {
+                    monitor.startMonitoring()
+                }
                 guard minutes > 0 || seconds > 0 else { return }
                 selectedDuration = minutes * 60 + seconds
                 navigateToRecording = true
