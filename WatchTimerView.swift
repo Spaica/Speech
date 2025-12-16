@@ -61,11 +61,8 @@ struct WatchTimerView: View {
                 
                 Text("\(monitor.currentWPM)")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
-                // Colore del testo in base alla soglia
-                    .foregroundColor(
-                        monitor.currentWPM > monitor.wpmThreshold
-                        && monitor.isMonitoring ? .red : .green
-                    )
+                    .foregroundColor(monitor.currentWPM > monitor.wpmThreshold && monitor.isMonitoring ? .red : .gray)
+                    
                 Text("WPM")
                 .font(.system(size: 12, weight: .light, design: .rounded))            }
         }

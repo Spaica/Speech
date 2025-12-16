@@ -43,8 +43,8 @@
 		AAA0070A2EF1515800A14DC4 /* TimerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerSetupView.swift; sourceTree = "<group>"; };
 		AAA0070B2EF1515800A14DC4 /* TimerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerViewModel.swift; sourceTree = "<group>"; };
 		AAA0070C2EF1515800A14DC4 /* WatchTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTimerView.swift; sourceTree = "<group>"; };
-		AAA0075E2EF15ED200A14DC4 /* Speech.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = Speech.app; path = "/Users/erfanyarahmadi/Documents/GitHub/Speech/build/Debug-iphoneos/Speech.app"; sourceTree = "<absolute>"; };
-		AAA0075F2EF15ED200A14DC4 /* Speech Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Speech Watch App.app"; path = "/Users/erfanyarahmadi/Documents/GitHub/Speech/build/Debug-watchos/Speech Watch App.app"; sourceTree = "<absolute>"; };
+		AAA0077A2EF162CE00A14DC4 /* Speech.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = Speech.app; path = "/Users/erfanyarahmadi/Documents/GitHub/Speech/build/Debug-iphoneos/Speech.app"; sourceTree = "<absolute>"; };
+		AAA0077B2EF162CE00A14DC4 /* Speech Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "Speech Watch App.app"; path = "/Users/erfanyarahmadi/Documents/GitHub/Speech/build/Debug-watchos/Speech Watch App.app"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -97,7 +97,7 @@
 			packageProductDependencies = (
 			);
 			productName = Speech;
-			productReference = AAA0075E2EF15ED200A14DC4 /* Speech.app */;
+			productReference = AAA0077A2EF162CE00A14DC4 /* Speech.app */;
 			productType = "com.apple.product-type.application.watchapp2-container";
 		};
 		D58ACB9F2EDF0171000AE096 /* Speech Watch App */ = {
@@ -119,7 +119,7 @@
 			packageProductDependencies = (
 			);
 			productName = "Speech Watch App";
-			productReference = AAA0075F2EF15ED200A14DC4 /* Speech Watch App.app */;
+			productReference = AAA0077B2EF162CE00A14DC4 /* Speech Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
