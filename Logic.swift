@@ -22,15 +22,15 @@ class SpeakingRateMonitor {
     
     // MARK: - WPM Thresholds
     /// Maximum WPM threshold - triggers haptic feedback when exceeded
-    let wpmThreshold: Int = 130
+    let wpmThreshold: Int = 160
     
     /// Minimum WPM threshold - alerts user to speak faster
-    let wpmThresholdMin: Int = 80
+    let wpmThresholdMin: Int = 100
     
     // MARK: - Audio Detection Parameters
     /// Root Mean Square (RMS) threshold - minimum amplitude to consider audio as speech vs. noise
     /// Higher values = less sensitive to background noise
-    private var rmsThreshold: Float = 0.03
+    private var rmsThreshold: Float = 0.01
     
     /// Peak amplitude threshold for detecting human voice (closer/louder sounds)
     /// Helps distinguish speech from constant background noise
@@ -269,8 +269,7 @@ class SpeakingRateMonitor {
             // First calculation - use raw value
             newWPM = Double(instantaneousRate)
         }
-        
-        print("📊 Density: \(String(format: "%.2f", instantaneousDensity)), Instantaneous WPM: \(instantaneousRate), Smoothed WPM: \(Int(newWPM))")
+       
         
         let finalWPM = Int(round(newWPM))
         
@@ -278,16 +277,17 @@ class SpeakingRateMonitor {
         let needsHaptic = finalWPM > wpmThreshold
         
         // Update UI and trigger haptic on main thread
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
+        DispatchQueue.main.async {
+            [weak self] in
+            guard let self = self else {
+                return
+            }
             
             // Update current WPM
             self.currentWPM = finalWPM
-            print("✅ WPM updated to: \(finalWPM)")
             
             // Check thresholds and update status
             if needsHaptic {
-                print("⚠️ THRESHOLD EXCEEDED: \(finalWPM) > \(self.wpmThreshold)")
                 self.statusMessage = "Slow down! (\(finalWPM) WPM)"
                 self.triggerHapticFeedback()
             } else if finalWPM < self.wpmThresholdMin && finalWPM > 0 {
@@ -303,7 +303,6 @@ class SpeakingRateMonitor {
     }
     
     // MARK: - Reset Metrics
-    /// Resets all monitoring metrics and buffers to initial state
     private func resetMetrics() {
         totalSpeakingTime = 0.0
         totalMonitoringTime = 0.0
@@ -315,13 +314,9 @@ class SpeakingRateMonitor {
     }
     
     // MARK: - Haptic Feedback
-        /// Triggers haptic feedback on Apple Watch
-        /// CRITICAL: Must be executed on main thread for haptics to work
-        /// Implements cooldown to prevent excessive vibrations
-        /// Provides a gentle, prolonged 3-second vibration pattern to alert user
         private func triggerHapticFeedback() {
             // Verify execution on main thread (crashes in debug if violated)
-            assert(Thread.isMainThread, "⛔️ triggerHapticFeedback must execute on main thread")
+            assert(Thread.isMainThread, "triggerHapticFeedback must execute on main thread")
             
             let now = Date()
             
@@ -329,12 +324,9 @@ class SpeakingRateMonitor {
             if let lastTime = lastHapticTime {
                 let timeSince = now.timeIntervalSince(lastTime)
                 if timeSince < hapticCooldown {
-                    print("⏱️ Haptic in cooldown - \(String(format: "%.1f", timeSince))s since last (requires \(hapticCooldown)s)")
                     return
                 }
             }
-            
-            print("🔴🔴🔴 TRIGGERING PROLONGED VIBRATION PATTERN - WPM: \(currentWPM) 🔴🔴🔴")
             
             // Create a gentle, prolonged vibration pattern over ~3 seconds
             // Using multiple soft haptics with spacing for a smooth, noticeable alert
@@ -345,52 +337,42 @@ class SpeakingRateMonitor {
             // Soft pulse series to create prolonged sensation
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 1")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 2")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 3")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 4")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 5")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 6")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 7")
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Pulse 8")
             }
             
-            // Final gentle tap to conclude pattern (t=2.7s)
+            // Final gentle tap to conclude pattern
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.7) {
                 WKInterfaceDevice.current().play(.directionDown)
-                print("🔴 Final pulse - vibration pattern complete")
             }
             
             // Update last haptic timestamp
             lastHapticTime = now
-            print("✅ Last vibration timestamp updated to: \(now)")
         }
     }
